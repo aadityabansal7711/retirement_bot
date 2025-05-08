@@ -2,7 +2,11 @@ import streamlit as st
 import locale
 
 # Indian currency format
-locale.setlocale(locale.LC_ALL, 'en_IN')
+import locale
+try:
+    locale.setlocale(locale.LC_ALL, 'en_IN')
+except locale.Error:
+    locale.setlocale(locale.LC_ALL, '')  # fallback to default
 
 def format_indian(number):
     return locale.format_string("%d", number, grouping=True)
