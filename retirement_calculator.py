@@ -68,10 +68,11 @@ if gap > 0:
 # DISPLAY RESULTS
 st.header("📌 Summary")
 st.markdown(f"""
-- 🧓 **You plan to retire at age {retirement_age} and expect to live till {life_expectancy}**, meaning **{years_in_retirement} retirement years**.
-- 💸 You will need about **₹{format_inr(total_needed_at_retirement)}** at retirement to cover your expenses.
-- ✅ You are projected to have **₹{format_inr(total_available_at_retirement)}** at retirement.
-""")
+- 💸 You will need about **₹{format_inr(int(total_needed_at_retirement))}** at retirement to cover your expenses.
+- ✅ You are projected to have **₹{format_inr(int(total_available_at_retirement))}** at retirement.
+- ❌ Deficit at retirement: **₹{format_inr(int(gap))}**
+- 💡 You need to start saving **₹{format_inr(int(monthly_saving_required))} per month** more to bridge this gap.
+
 
 if gap <= 0:
     st.success("🎉 You’re saving enough for retirement!")
