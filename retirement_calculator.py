@@ -70,7 +70,7 @@ st.header("📌 Summary")
 st.markdown(f"""
 - 💸 You will need about **₹{format_inr(int(total_needed_at_retirement))}** at retirement to cover your expenses.
 - ✅ You are projected to have **₹{format_inr(int(total_available_at_retirement))}** at retirement.
-- ❌ Deficit at retirement: **₹{format_inr(int(gap))}**
+-  Deficit at retirement: **₹{format_inr(int(gap))}**
 - 💡 You need to start saving **₹{format_inr(int(monthly_saving_required))} per month** more to bridge this gap.
 
 
@@ -79,7 +79,7 @@ if gap <= 0:
 else:
     st.warning("⚠️ You’re **not saving enough** for your retirement.")
     st.markdown(f"""
-    - ❌ Deficit at retirement: **₹{format_inr(gap)}**
+    -  Deficit at retirement: **₹{format_inr(gap)}**
     - 💡 You need to start saving **₹{format_inr(monthly_saving_required)} per month** more to bridge this gap.
     """)
 
