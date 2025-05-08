@@ -1,5 +1,14 @@
 import streamlit as st
 import locale
+def format_inr(num):
+    """Format number in Indian numbering style"""
+    s, *d = str(int(num))[::-1], []
+    for i in range(len(s)):
+        if i == 3 or (i > 3 and (i - 1) % 2 == 0):
+            d.append(',')
+        d.append(s[i])
+    return ''.join(d[::-1])
+
 import math
 
 # Set locale for Indian number formatting
