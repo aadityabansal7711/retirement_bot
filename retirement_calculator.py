@@ -1,21 +1,15 @@
 import streamlit as st
-import locale
+import math
+import pandas as pd
+
+# Indian comma formatter
 def format_inr(num):
-    """Format number in Indian numbering style"""
     s, *d = str(int(num))[::-1], []
     for i in range(len(s)):
         if i == 3 or (i > 3 and (i - 1) % 2 == 0):
             d.append(',')
         d.append(s[i])
     return ''.join(d[::-1])
-
-import math
-
-# Set locale for Indian number formatting
-locale.setlocale(locale.LC_ALL, 'en_IN')
-
-def format_inr(value):
-    return locale.format_string("%d", math.floor(value), grouping=True)
 
 st.set_page_config(page_title="Retirement Calculator", layout="centered")
 
@@ -44,13 +38,18 @@ with col2:
 years_to_retire = retirement_age - current_age
 years_in_retirement = life_expectancy - retirement_age
 
+# Future expense adjusted for inflation
 future_expense = annual_expenses * ((1 + inflation_rate / 100) ** years_to_retire)
+
+# Total retirement corpus needed at retirement age (discounted sum of post-retirement expenses)
 total_needed_at_retirement = sum([
     future_expense * ((1 + inflation_rate / 100) ** i) / ((1 + return_rate / 100) ** i)
     for i in range(years_in_retirement)
 ])
 
+# Future value of current savings and annual investments
 future_value_savings = current_savings * ((1 + return_rate / 100) ** years_to_retire)
+
 future_investment_value = sum([
     annual_investment * ((1 + return_rate / 100) ** (years_to_retire - i))
     for i in range(years_to_retire)
@@ -72,7 +71,6 @@ st.markdown(f"""
 - 🧓 **You plan to retire at age {retirement_age} and expect to live till {life_expectancy}**, meaning **{years_in_retirement} retirement years**.
 - 💸 You will need about **₹{format_inr(total_needed_at_retirement)}** at retirement to cover your expenses.
 - ✅ You are projected to have **₹{format_inr(total_available_at_retirement)}** at retirement.
-
 """)
 
 if gap <= 0:
@@ -87,25 +85,21 @@ else:
 with st.expander("🔍 Show Detailed Explanation"):
     st.markdown(f"""
     #### How this is calculated:
-    - **Future Expenses**: Your current expenses are inflated by {inflation_rate}% over {years_to_retire} years.
-    - **Total Needed**: All post-retirement yearly expenses are discounted back to the retirement age using a {return_rate}% return rate.
-    - **Future Value of Current Savings & Investments**: Your current savings and investments are grown at {return_rate}% for {years_to_retire} years.
-    - **Monthly Gap Saving**: If there’s a shortfall, we calculate how much monthly saving from today will grow into that gap using compound interest.
+    - **Future Expenses**: Your current annual expenses of ₹{format_inr(annual_expenses)} are inflated at {inflation_rate}% for {years_to_retire} years.
+    - **Total Needed**: We calculate the total of all retirement year expenses discounted back to retirement using a {return_rate}% return rate.
+    - **Savings & Investment**: We project your current savings and yearly investment forward using compound growth over {years_to_retire} years.
+    - **Gap**: If the available money is less than needed, we compute how much extra monthly saving you need to meet the shortfall.
     """)
 
-# DOWNLOAD OPTIONS
-import pandas as pd
-
+# DOWNLOAD OPTION
 df = pd.DataFrame({
     "Label": ["Total Needed at Retirement", "Projected Savings", "Gap", "Extra Monthly Saving Required"],
     "Amount (₹)": [
-        math.floor(total_needed_at_retirement),
-        math.floor(total_available_at_retirement),
-        math.floor(gap),
-        math.floor(monthly_saving_required)
+        int(total_needed_at_retirement),
+        int(total_available_at_retirement),
+        int(gap),
+        int(monthly_saving_required)
     ]
 })
 
 st.download_button("📤 Download Summary as Excel", df.to_csv(index=False), file_name="retirement_summary.csv")
-
-# You can later add PDF export using reportlab or pdfkit if needed
