@@ -1,120 +1,102 @@
 import streamlit as st
 import locale
+import math
 
-# Indian currency format
-import locale
-try:
-    locale.setlocale(locale.LC_ALL, 'en_IN')
-except locale.Error:
-    locale.setlocale(locale.LC_ALL, '')  # fallback to default
+# Set locale for Indian number formatting
+locale.setlocale(locale.LC_ALL, 'en_IN')
 
-def format_indian(number):
-    return locale.format_string("%d", number, grouping=True)
+def format_inr(value):
+    return locale.format_string("%d", math.floor(value), grouping=True)
 
-st.set_page_config(page_title="Smart Retirement Planner", page_icon="📈", layout="centered")
-st.title("📈 Smart Retirement Planner")
+st.set_page_config(page_title="Retirement Calculator", layout="centered")
 
-# User Inputs
-st.header("🧾 Your Current Financial Info")
+st.title("🧮 Retirement Calculator")
 
-annual_income = st.number_input("Current Annual Income (₹)", min_value=0, step=10000, value=600000)
-income_growth_rate = st.number_input("Expected Annual Income Growth Rate (%)", min_value=0.0, max_value=100.0, step=0.1, value=5.0)
-annual_expenses = st.number_input("Current Annual Expenses (₹)", min_value=0, step=10000, value=300000)
-annual_savings = st.number_input("Annual Savings / Investments (₹)", min_value=0, step=10000, value=200000)
-return_rate = st.number_input("Expected Annual Return on Investment (%)", min_value=0.0, max_value=30.0, step=0.1, value=8.0)
-inflation_rate = st.number_input("Expected Annual Inflation Rate (%)", min_value=0.0, max_value=20.0, step=0.1, value=6.0)
+st.markdown("Fill in the details below to find out how much you need to save for a secure retirement.")
 
-st.header("🕰 Retirement Goals")
+# INPUTS
+col1, col2 = st.columns(2)
 
-current_age = st.number_input("Your Current Age", min_value=18, max_value=80, value=30)
-retirement_age = st.number_input("Age You Want to Retire", min_value=current_age + 1, max_value=80, value=60)
-life_expectancy = st.number_input("Expected Lifespan", min_value=retirement_age + 1, max_value=100, value=85)
-post_retirement_income = st.number_input("Expected Annual Income After Retirement (₹)", min_value=0, step=10000, value=500000)
+with col1:
+    annual_income = st.number_input("💼 Current Annual Income (₹)", min_value=0, step=10000, format="%d")
+    income_growth = st.slider("📈 Expected Annual Income Growth (%)", 0.0, 15.0, 5.0, step=0.1)
+    annual_expenses = st.number_input("🧾 Current Annual Expenses (₹)", min_value=0, step=10000, format="%d")
+    current_savings = st.number_input("💰 Current Total Savings (₹)", min_value=0, step=10000, format="%d")
 
-# Calculations
-years_to_retirement = retirement_age - current_age
-years_post_retirement = life_expectancy - retirement_age
-adjusted_income = post_retirement_income * ((1 + inflation_rate / 100) ** years_to_retirement)
+with col2:
+    annual_investment = st.number_input("📥 Annual Investment/Savings (₹)", min_value=0, step=10000, format="%d")
+    return_rate = st.slider("📊 Expected Annual Return (%)", 0.0, 15.0, 7.0, step=0.1)
+    inflation_rate = st.slider("🔥 Expected Inflation Rate (%)", 0.0, 10.0, 6.0, step=0.1)
+    current_age = st.slider("🎂 Your Current Age", 18, 70, 30)
+    retirement_age = st.slider("🏖️ Retirement Age", current_age + 1, 80, 60)
+    life_expectancy = st.slider("⚰️ Expected Lifespan", retirement_age + 1, 100, 85)
 
-def present_value_annuity(pmt, r, n):
-    if r == 0:
-        return pmt * n
-    r /= 100
-    return pmt * ((1 - (1 + r) ** -n) / r)
+# CALCULATIONS
+years_to_retire = retirement_age - current_age
+years_in_retirement = life_expectancy - retirement_age
 
-required_corpus = present_value_annuity(adjusted_income, return_rate - inflation_rate, years_post_retirement)
+future_expense = annual_expenses * ((1 + inflation_rate / 100) ** years_to_retire)
+total_needed_at_retirement = sum([
+    future_expense * ((1 + inflation_rate / 100) ** i) / ((1 + return_rate / 100) ** i)
+    for i in range(years_in_retirement)
+])
 
-future_value = 0
-annual_contribution = annual_savings
-salary = annual_income
+future_value_savings = current_savings * ((1 + return_rate / 100) ** years_to_retire)
+future_investment_value = sum([
+    annual_investment * ((1 + return_rate / 100) ** (years_to_retire - i))
+    for i in range(years_to_retire)
+])
 
-for year in range(years_to_retirement):
-    future_value = (future_value + annual_contribution) * (1 + return_rate / 100)
-    salary *= 1 + income_growth_rate / 100
-    annual_contribution = salary - annual_expenses
+total_available_at_retirement = future_value_savings + future_investment_value
+gap = total_needed_at_retirement - total_available_at_retirement
+gap = max(0, gap)
 
-def monthly_sip_needed(fv, rc, years, rate):
-    r = rate / 100 / 12
-    n = years * 12
-    fv_gap = rc - fv
-    if r == 0 or fv_gap <= 0:
-        return 0
-    return fv_gap * r / ((1 + r) ** n - 1)
+monthly_saving_required = 0
+if gap > 0:
+    r = (return_rate / 100) / 12
+    n = years_to_retire * 12
+    monthly_saving_required = gap * r / ((1 + r) ** n - 1)
 
-monthly_saving_required = monthly_sip_needed(future_value, required_corpus, years_to_retirement, return_rate)
+# DISPLAY RESULTS
+st.header("📌 Summary")
+st.markdown(f"""
+- 🧓 **You plan to retire at age {retirement_age} and expect to live till {life_expectancy}**, meaning **{years_in_retirement} retirement years**.
+- 💸 You will need about **₹{format_inr(total_needed_at_retirement)}** at retirement to cover your expenses.
+- ✅ You are projected to have **₹{format_inr(total_available_at_retirement)}** at retirement.
 
-# Outputs
-st.header("📊 Results")
+""")
 
-st.success(f"🧓 You will need ₹{format_indian(int(required_corpus))} at age {retirement_age} to retire comfortably.")
-st.info(f"📌 Based on current savings, you'll have ₹{format_indian(int(future_value))} by then.")
-st.warning(f"💸 You need to save at least ₹{format_indian(int(monthly_saving_required))} per month starting today.")
-
-st.header("💡 Recommendations")
-
-if monthly_saving_required == 0:
-    st.success("🎉 You are already on track for your retirement goals!")
+if gap <= 0:
+    st.success("🎉 You’re saving enough for retirement!")
 else:
+    st.warning("⚠️ You’re **not saving enough** for your retirement.")
     st.markdown(f"""
-    - 💰 **Increase your annual savings** by {int((monthly_saving_required*12 - annual_savings)/1000)*1000} ₹ per year.
-    - 📈 Start investing early to benefit from compounding over time.
-    - 🧾 Review expenses yearly to make space for investing more.
-    - 🧠 Consider consulting a certified financial planner for more precise investment vehicles.
+    - ❌ Deficit at retirement: **₹{format_inr(gap)}**
+    - 💡 You need to start saving **₹{format_inr(monthly_saving_required)} per month** more to bridge this gap.
     """)
 
-# Optional Explanation
-with st.expander("🔍 How We Calculated This (Click to Learn More)"):
+with st.expander("🔍 Show Detailed Explanation"):
     st.markdown(f"""
-    - **You have {years_to_retirement} years** until retirement and plan to live {years_post_retirement} years after retiring.
-    - Your future income need of ₹{format_indian(int(post_retirement_income))} will be inflated to ₹{format_indian(int(adjusted_income))} annually by then.
-    - The total retirement **corpus needed** to sustain that lifestyle = ₹{format_indian(int(required_corpus))}.
-    - Based on your income, savings and returns, your investments will grow to ₹{format_indian(int(future_value))}.
-    - If there's a shortfall, we compute the **monthly SIP (Systematic Investment Plan)** needed to bridge that gap.
+    #### How this is calculated:
+    - **Future Expenses**: Your current expenses are inflated by {inflation_rate}% over {years_to_retire} years.
+    - **Total Needed**: All post-retirement yearly expenses are discounted back to the retirement age using a {return_rate}% return rate.
+    - **Future Value of Current Savings & Investments**: Your current savings and investments are grown at {return_rate}% for {years_to_retire} years.
+    - **Monthly Gap Saving**: If there’s a shortfall, we calculate how much monthly saving from today will grow into that gap using compound interest.
     """)
 
-st.caption("Note: Results are estimates and assume constant returns & inflation.")
-
+# DOWNLOAD OPTIONS
 import pandas as pd
 
-def save_to_excel(required_corpus, future_value, monthly_saving_required, post_retirement_income, inflation_rate, return_rate, retirement_age):
-    data = {
-        "Retirement Age": [retirement_age],
-        "Post-Retirement Income (₹)": [post_retirement_income],
-        "Expected Inflation Rate (%)": [inflation_rate],
-        "Expected Return on Investment (%)": [return_rate],
-        "Total Corpus Needed (₹)": [required_corpus],
-        "Expected Corpus at Retirement (₹)": [future_value],
-        "Monthly Saving Needed (₹)": [monthly_saving_required]
-    }
-    df = pd.DataFrame(data)
+df = pd.DataFrame({
+    "Label": ["Total Needed at Retirement", "Projected Savings", "Gap", "Extra Monthly Saving Required"],
+    "Amount (₹)": [
+        math.floor(total_needed_at_retirement),
+        math.floor(total_available_at_retirement),
+        math.floor(gap),
+        math.floor(monthly_saving_required)
+    ]
+})
 
-    # Save to Excel
-    excel_output_path = "retirement_plan.xlsx"
-    df.to_excel(excel_output_path, index=False, engine="openpyxl")
+st.download_button("📤 Download Summary as Excel", df.to_csv(index=False), file_name="retirement_summary.csv")
 
-    return excel_output_path
-
-# Button to save Excel
-if st.button("Save Results as Excel"):
-    excel_file = save_to_excel(required_corpus, future_value, monthly_saving_required, post_retirement_income, inflation_rate, return_rate, retirement_age)
-    st.success(f"Your retirement plan has been saved as Excel: {excel_file}")
+# You can later add PDF export using reportlab or pdfkit if needed
